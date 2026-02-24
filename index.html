@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Googly Eyes">
+  <title>Googly Eyes</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #f5e6c8;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    #prompt {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #888;
+      font-size: 18px;
+      line-height: 1.6;
+      transition: opacity 0.5s;
+      pointer-events: none;
+    }
+
+    #prompt.hidden {
+      opacity: 0;
+    }
+
+    .face {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .eye {
+      position: absolute;
+      background: #fff;
+      border-radius: 50%;
+      border: 3px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow:
+        inset 0 4px 12px rgba(0, 0, 0, 0.1),
+        0 4px 20px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+    }
+
+    .eye::after {
+      content: '';
+      position: absolute;
+      width: 30%;
+      height: 20%;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 50%;
+      top: 12%;
+      left: 18%;
+      transform: rotate(-30deg);
+    }
+
+    .eye.left {
+      width: 140px;
+      height: 160px;
+      top: calc(50% - 120px);
+      left: calc(50% - 160px);
+    }
+
+    .eye.right {
+      width: 140px;
+      height: 160px;
+      top: calc(50% - 120px);
+      right: calc(50% - 160px);
+    }
+
+    .pupil-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pupil {
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle at 35% 35%, #444, #111);
+      border-radius: 50%;
+      position: absolute;
+      transition: transform 0.05s ease-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .pupil::after {
+      content: '';
+      position: absolute;
+      width: 35%;
+      height: 35%;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      top: 18%;
+      left: 22%;
+    }
+
+    .mouth {
+      position: absolute;
+      top: calc(50% + 80px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 40px;
+      border-bottom: 4px solid #333;
+      border-radius: 0 0 50% 50%;
+    }
+
+    #color-picker {
+      position: absolute;
+      bottom: max(30px, env(safe-area-inset-bottom, 20px));
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 14px;
+      z-index: 10;
+    }
+
+    .color-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .color-dot:active {
+      transform: scale(0.9);
+    }
+
+    .color-dot.active {
+      border-color: #333;
+      transform: scale(1.15);
+    }
+
+    @media (min-width: 500px) {
+      .eye.left {
+        width: 180px;
+        height: 210px;
+        top: calc(50% - 150px);
+        left: calc(50% - 210px);
+      }
+      .eye.right {
+        width: 180px;
+        height: 210px;
+        top: calc(50% - 150px);
+        right: calc(50% - 210px);
+      }
+      .pupil {
+        width: 80px;
+        height: 80px;
+      }
+      .mouth {
+        top: calc(50% + 110px);
+        width: 100px;
+        height: 50px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="prompt">
+    Touch and drag anywhere<br>or tilt your phone
+  </div>
+  <div class="face">
+    <div class="eye left" id="eye-left">
+      <div class="pupil-container">
+        <div class="pupil" id="pupil-left"></div>
+      </div>
+    </div>
+    <div class="eye right" id="eye-right">
+      <div class="pupil-container">
+        <div class="pupil" id="pupil-right"></div>
+      </div>
+    </div>
+    <div class="mouth"></div>
+  </div>
+  <div id="color-picker">
+    <div class="color-dot active" style="background: #f5e6c8;" data-color="#f5e6c8"></div>
+    <div class="color-dot" style="background: #a8d8ea;" data-color="#a8d8ea"></div>
+    <div class="color-dot" style="background: #ffb7b2;" data-color="#ffb7b2"></div>
+    <div class="color-dot" style="background: #b5e48c;" data-color="#b5e48c"></div>
+    <div class="color-dot" style="background: #c3b1e1;" data-color="#c3b1e1"></div>
+  </div>
+
+  <script>
+    const pupilLeft = document.getElementById('pupil-left');
+    const pupilRight = document.getElementById('pupil-right');
+    const eyeLeft = document.getElementById('eye-left');
+    const eyeRight = document.getElementById('eye-right');
+    const prompt = document.getElementById('prompt');
+    const colorPicker = document.getElementById('color-picker');
+
+    let hasInteracted = false;
+    let useGyro = false;
+
+    // Physics state for each pupil (for gravity/gyro mode)
+    const pupils = [
+      { el: pupilLeft, eye: eyeLeft, x: 0, y: 0, vx: 0, vy: 0 },
+      { el: pupilRight, eye: eyeRight, x: 0, y: 0, vx: 0, vy: 0 }
+    ];
+
+    // Gravity from device orientation
+    let gravX = 0;
+    let gravY = 0;
+
+    // Touch/pointer position (null when not touching)
+    let pointerX = null;
+    let pointerY = null;
+
+    function hidePrompt() {
+      if (!hasInteracted) {
+        hasInteracted = true;
+        prompt.classList.add('hidden');
+      }
+    }
+
+    // --- Color picker ---
+    colorPicker.addEventListener('click', function(e) {
+      const dot = e.target.closest('.color-dot');
+      if (!dot) return;
+      document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+      document.body.style.background = dot.dataset.color;
+    });
+
+    // --- Gyroscope / Device Orientation ---
+    function handleOrientation(e) {
+      hidePrompt();
+      useGyro = true;
+      // beta: front-back tilt (-180..180), gamma: left-right tilt (-90..90)
+      const beta = e.beta || 0;
+      const gamma = e.gamma || 0;
+      // Normalize: when phone held upright, beta ~90, so subtract 90
+      gravX = gamma / 90;          // -1..1 left-right
+      gravY = (beta - 60) / 90;    // roughly -1..1 for natural hold
+      gravX = Math.max(-1, Math.min(1, gravX));
+      gravY = Math.max(-1, Math.min(1, gravY));
+    }
+
+    // Request permission on iOS 13+
+    function requestGyro() {
+      if (typeof DeviceOrientationEvent !== 'undefined' &&
+          typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(state => {
+            if (state === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation);
+            }
+          })
+          .catch(console.error);
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+      }
+    }
+
+    // Request gyro on first user gesture
+    document.addEventListener('touchstart', function initGyro() {
+      requestGyro();
+      document.removeEventListener('touchstart', initGyro);
+    }, { once: true });
+
+    // --- Touch / Pointer ---
+    function onPointerMove(e) {
+      e.preventDefault();
+      hidePrompt();
+      const touch = e.touches ? e.touches[0] : e;
+      pointerX = touch.clientX;
+      pointerY = touch.clientY;
+    }
+
+    function onPointerEnd() {
+      pointerX = null;
+      pointerY = null;
+    }
+
+    document.addEventListener('touchstart', onPointerMove, { passive: false });
+    document.addEventListener('touchmove', onPointerMove, { passive: false });
+    document.addEventListener('touchend', onPointerEnd);
+    document.addEventListener('touchcancel', onPointerEnd);
+    document.addEventListener('mousemove', onPointerMove);
+    document.addEventListener('mouseleave', onPointerEnd);
+
+    // --- Pupil positioning ---
+    function getEyeMetrics(eyeEl, pupilEl) {
+      const eyeRect = eyeEl.getBoundingClientRect();
+      const pupilW = pupilEl.offsetWidth;
+      const pupilH = pupilEl.offsetHeight;
+      const cx = eyeRect.left + eyeRect.width / 2;
+      const cy = eyeRect.top + eyeRect.height / 2;
+      const maxX = (eyeRect.width - pupilW) / 2 - 4;
+      const maxY = (eyeRect.height - pupilH) / 2 - 4;
+      return { cx, cy, maxX, maxY };
+    }
+
+    function movePupilToward(pupil, targetNX, targetNY) {
+      // targetNX, targetNY in -1..1 range
+      const { maxX, maxY } = getEyeMetrics(pupil.eye, pupil.el);
+      const tx = targetNX * maxX;
+      const ty = targetNY * maxY;
+      pupil.el.style.transform = `translate(${tx}px, ${ty}px)`;
+    }
+
+    function movePupilToPoint(pupil, px, py) {
+      const { cx, cy, maxX, maxY } = getEyeMetrics(pupil.eye, pupil.el);
+      let dx = px - cx;
+      let dy = py - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Normalize and scale based on distance
+      const maxDist = 200;
+      const scale = Math.min(dist / maxDist, 1);
+      const nx = (dx / (dist || 1)) * scale;
+      const ny = (dy / (dist || 1)) * scale;
+      const tx = nx * maxX;
+      const ty = ny * maxY;
+      pupil.el.style.transform = `translate(${tx}px, ${ty}px)`;
+    }
+
+    // Physics simulation for gyro mode
+    const DAMPING = 0.85;
+    const ACCEL = 1.2;
+
+    function physicsTick(pupil) {
+      pupil.vx += gravX * ACCEL;
+      pupil.vy += gravY * ACCEL;
+      pupil.vx *= DAMPING;
+      pupil.vy *= DAMPING;
+      pupil.x += pupil.vx;
+      pupil.y += pupil.vy;
+
+      // Clamp to eye bounds
+      const { maxX, maxY } = getEyeMetrics(pupil.eye, pupil.el);
+      const clampedX = Math.max(-maxX, Math.min(maxX, pupil.x));
+      const clampedY = Math.max(-maxY, Math.min(maxY, pupil.y));
+
+      // Bounce off walls
+      if (pupil.x !== clampedX) {
+        pupil.x = clampedX;
+        pupil.vx *= -0.3;
+      }
+      if (pupil.y !== clampedY) {
+        pupil.y = clampedY;
+        pupil.vy *= -0.3;
+      }
+
+      pupil.el.style.transform = `translate(${pupil.x}px, ${pupil.y}px)`;
+    }
+
+    // --- Animation loop ---
+    function animate() {
+      if (pointerX !== null && pointerY !== null) {
+        // Touch/pointer mode: eyes follow finger
+        pupils.forEach(p => movePupilToPoint(p, pointerX, pointerY));
+        // Reset physics state so gyro resumes smoothly
+        pupils.forEach(p => {
+          const { maxX, maxY } = getEyeMetrics(p.eye, p.el);
+          const transform = p.el.style.transform;
+          const match = transform.match(/translate\((.+?)px,\s*(.+?)px\)/);
+          if (match) {
+            p.x = parseFloat(match[1]);
+            p.y = parseFloat(match[2]);
+          }
+          p.vx = 0;
+          p.vy = 0;
+        });
+      } else if (useGyro) {
+        // Gyro/physics mode
+        pupils.forEach(p => physicsTick(p));
+      }
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
